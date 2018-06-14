@@ -245,7 +245,6 @@ const isBelowKitKat = Platform.Version < 19;
 
 const styles = StyleSheet.create({
   container: {
-    width: screenWidth,
     backgroundColor: 'transparent'
   },
   webView: {

@@ -131,7 +131,6 @@ const screenWidth = Dimensions.get('window').width;
 
 const styles = StyleSheet.create({
   container: {
-    width: screenWidth,
     backgroundColor: 'transparent'
   },
   webView: {
