@@ -1,12 +1,17 @@
 package com.dscj.autoheightwebview;
 
+import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.facebook.react.uimanager.ThemedReactContext;
-import com.facebook.react.views.webview.ReactWebViewManager;
 
 import java.util.Map;
+
 import javax.annotation.Nullable;
 
 public class AutoHeightWebViewManager extends ReactWebViewManager {
@@ -30,11 +35,22 @@ public class AutoHeightWebViewManager extends ReactWebViewManager {
     }
 
     @Override
-    protected WebView createViewInstance(ThemedReactContext reactContext) {
-        WebView webview = super.createViewInstance(reactContext);
+    protected WebView createViewInstance(final ThemedReactContext reactContext) {
+        final WebView webview = super.createViewInstance(reactContext);
         webview.setVerticalScrollBarEnabled(false);
         webview.setHorizontalScrollBarEnabled(false);
         webview.addJavascriptInterface(new JavascriptBridge(webview), "AutoHeightWebView");
+
+        webview.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onReceivedTitle(WebView view, String title) {
+                super.onReceivedTitle(view, title);
+                WritableMap writableMap = Arguments.createMap();
+                writableMap.putString("url", view.getUrl());
+                writableMap.putString("title", title);
+                sendEvent(reactContext, "updateTitle", writableMap);
+            }
+        });
 
         return webview;
     }
@@ -59,5 +75,13 @@ public class AutoHeightWebViewManager extends ReactWebViewManager {
         } else {
             webView.loadUrl("javascript:" + script);
         }
+    }
+
+    private void sendEvent(ReactContext reactContext,
+                           String eventName,
+                           @android.support.annotation.Nullable WritableMap params) {
+        reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(eventName, params);
     }
 }
