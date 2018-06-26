@@ -1,142 +1,145 @@
 'use strict';
 
-import React, { PureComponent } from 'react';
+import React, {PureComponent} from 'react';
 
-import { Animated, Dimensions, StyleSheet, ViewPropTypes, WebView } from 'react-native';
+import {Animated, Dimensions, StyleSheet, ViewPropTypes, WebView} from 'react-native';
 
 import PropTypes from 'prop-types';
 
-import { getScript, onHeightUpdated, domMutationObserveScript } from './common.js';
+import {getScript, onHeightUpdated, domMutationObserveScript} from './common.js';
 
 export default class AutoHeightWebView extends PureComponent {
-  static propTypes = {
-    hasIframe: PropTypes.bool,
-    source: WebView.propTypes.source,
-    onHeightUpdated: PropTypes.func,
-    customScript: PropTypes.string,
-    customStyle: PropTypes.string,
-    enableAnimation: PropTypes.bool,
-    // if set to true may cause some layout issues (smaller font size)
-    scalesPageToFit: PropTypes.bool,
-    // only works on enable animation
-    animationDuration: PropTypes.number,
-    // offset of rn webview margin
-    heightOffset: PropTypes.number,
-    style: ViewPropTypes.style,
-    //  rn WebView callback
-    onError: PropTypes.func,
-    onLoad: PropTypes.func,
-    onLoadStart: PropTypes.func,
-    onLoadEnd: PropTypes.func,
-    onShouldStartLoadWithRequest: PropTypes.func,
-    // add web/files... to project root
-    files: PropTypes.arrayOf(
-      PropTypes.shape({
-        href: PropTypes.string,
-        type: PropTypes.string,
-        rel: PropTypes.string
-      })
-    )
-  };
-
-  static defaultProps = {
-    scalesPageToFit: false,
-    enableAnimation: true,
-    animationDuration: 555,
-    heightOffset: 12
-  };
-
-  constructor(props) {
-    super(props);
-    props.enableAnimation && (this.opacityAnimatedValue = new Animated.Value(0));
-    this.state = {
-      height: 0,
-      script: getScript(props, baseScript, iframeBaseScript)
+    static propTypes = {
+        hasIframe: PropTypes.bool,
+        source: WebView.propTypes.source,
+        onHeightUpdated: PropTypes.func,
+        customScript: PropTypes.string,
+        customStyle: PropTypes.string,
+        enableAnimation: PropTypes.bool,
+        // if set to true may cause some layout issues (smaller font size)
+        scalesPageToFit: PropTypes.bool,
+        // only works on enable animation
+        animationDuration: PropTypes.number,
+        // offset of rn webview margin
+        heightOffset: PropTypes.number,
+        style: ViewPropTypes.style,
+        //  rn WebView callback
+        onError: PropTypes.func,
+        onLoad: PropTypes.func,
+        onLoadStart: PropTypes.func,
+        onLoadEnd: PropTypes.func,
+        onShouldStartLoadWithRequest: PropTypes.func,
+        // add web/files... to project root
+        files: PropTypes.arrayOf(
+            PropTypes.shape({
+                href: PropTypes.string,
+                type: PropTypes.string,
+                rel: PropTypes.string
+            })
+        ),
+        updateTitle: PropTypes.func,
     };
-  }
 
-  componentWillReceiveProps(nextProps) {
-    this.setState({ script: getScript(nextProps, baseScript, iframeBaseScript) });
-  }
+    static defaultProps = {
+        scalesPageToFit: false,
+        enableAnimation: true,
+        animationDuration: 555,
+        heightOffset: 12
+    };
 
-  handleNavigationStateChange = navState => {
-    const height = Number(navState.title);
-    const { enableAnimation, animationDuration } = this.props;
-    if (height && height !== this.state.height) {
-      enableAnimation && this.opacityAnimatedValue.setValue(0);
-      this.setState({ height }, () => {
-        enableAnimation
-          ? Animated.timing(this.opacityAnimatedValue, {
-              toValue: 1,
-              duration: animationDuration
-            }).start(() => onHeightUpdated(height, this.props))
-          : onHeightUpdated(height, this.props);
-      });
+    constructor(props) {
+        super(props);
+        props.enableAnimation && (this.opacityAnimatedValue = new Animated.Value(0));
+        this.state = {
+            height: 0,
+            script: getScript(props, baseScript, iframeBaseScript)
+        };
     }
-  };
 
-  getWebView = webView => (this.webView = webView);
+    componentWillReceiveProps(nextProps) {
+        this.setState({script: getScript(nextProps, baseScript, iframeBaseScript)});
+    }
 
-  stopLoading() {
-    this.webView.stopLoading();
-  }
+    handleNavigationStateChange = navState => {
+        let arr = navState.title.split(',h=');
+        const height = Number(arr[1]);
+        this.props.updateTitle && this.props.updateTitle(arr[0]);
+        const {enableAnimation, animationDuration} = this.props;
+        if (height && height !== this.state.height) {
+            enableAnimation && this.opacityAnimatedValue.setValue(0);
+            this.setState({height}, () => {
+                enableAnimation
+                    ? Animated.timing(this.opacityAnimatedValue, {
+                        toValue: 1,
+                        duration: animationDuration
+                    }).start(() => onHeightUpdated(height, this.props))
+                    : onHeightUpdated(height, this.props);
+            });
+        }
+    };
 
-  render() {
-    const { height, script } = this.state;
-    const {
-      onError,
-      onLoad,
-      onLoadStart,
-      onLoadEnd,
-      onShouldStartLoadWithRequest,
-      scalesPageToFit,
-      enableAnimation,
-      source,
-      heightOffset,
-      customScript,
-      style
-    } = this.props;
-    const webViewSource = Object.assign({}, source, { baseUrl: 'web/' });
-    return (
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: enableAnimation ? this.opacityAnimatedValue : 1,
-            height: height + heightOffset
-          },
-          style
-        ]}
-      >
-        <WebView
-          ref={this.getWebView}
-          onError={onError}
-          onLoad={onLoad}
-          onLoadStart={onLoadStart}
-          onLoadEnd={onLoadEnd}
-          onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
-          style={styles.webView}
-          injectedJavaScript={script + customScript}
-          scrollEnabled={false}
-          scalesPageToFit={scalesPageToFit}
-          source={webViewSource}
-          onNavigationStateChange={this.handleNavigationStateChange}
-        />
-      </Animated.View>
-    );
-  }
+    getWebView = webView => (this.webView = webView);
+
+    stopLoading() {
+        this.webView.stopLoading();
+    }
+
+    render() {
+        const {height, script} = this.state;
+        const {
+            onError,
+            onLoad,
+            onLoadStart,
+            onLoadEnd,
+            onShouldStartLoadWithRequest,
+            scalesPageToFit,
+            enableAnimation,
+            source,
+            heightOffset,
+            customScript,
+            style
+        } = this.props;
+        const webViewSource = Object.assign({}, source, {baseUrl: 'web/'});
+        return (
+            <Animated.View
+                style={[
+                    styles.container,
+                    {
+                        opacity: enableAnimation ? this.opacityAnimatedValue : 1,
+                        height: height + heightOffset
+                    },
+                    style
+                ]}
+            >
+                <WebView
+                    ref={this.getWebView}
+                    onError={onError}
+                    onLoad={onLoad}
+                    onLoadStart={onLoadStart}
+                    onLoadEnd={onLoadEnd}
+                    onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
+                    style={styles.webView}
+                    injectedJavaScript={script + customScript}
+                    scrollEnabled={false}
+                    scalesPageToFit={scalesPageToFit}
+                    source={webViewSource}
+                    onNavigationStateChange={this.handleNavigationStateChange}
+                />
+            </Animated.View>
+        );
+    }
 }
 
 const screenWidth = Dimensions.get('window').width;
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: 'transparent'
-  },
-  webView: {
-    flex: 1,
-    backgroundColor: 'transparent'
-  }
+    container: {
+        backgroundColor: 'transparent'
+    },
+    webView: {
+        flex: 1,
+        backgroundColor: 'transparent'
+    }
 });
 
 const commonScript = `
@@ -169,7 +172,7 @@ const baseScript = `
         function updateHeight() {
             if(document.body.offsetHeight !== height) {
                 height = getHeight(wrapper.clientHeight);
-                document.title = height;
+                document.title = document.title + ',h=' + height;
                 window.location.hash = ++i;
             }
         }
@@ -187,7 +190,7 @@ const iframeBaseScript = `
         function updateHeight() {
             if(document.body.offsetHeight !== height) {
                 height = getHeight(document.body.firstChild.clientHeight);
-                document.title = height;
+                document.title = document.title + ',h=' + height;
                 window.location.hash = ++i;
             }
         }
