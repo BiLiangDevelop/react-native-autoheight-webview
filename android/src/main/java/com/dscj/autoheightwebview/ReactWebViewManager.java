@@ -119,7 +119,7 @@ public class ReactWebViewManager extends SimpleViewManager<WebView> {
         ReadableArray mUrlPrefixesForDefaultIntent;
 
         @Override
-        public void onPageFinished(WebView webView, String url) {
+        public void onPageFinished(final WebView webView, String url) {
             super.onPageFinished(webView, url);
 
             if (!mLastLoadFailed) {
@@ -129,14 +129,22 @@ public class ReactWebViewManager extends SimpleViewManager<WebView> {
                 emitFinishEvent(webView, url);
 
                 Log.i(TAG, "onPageFinished: getContentHeight = " + webView.getContentHeight());
-
-                if (webView.getContentHeight() > 0) {
-                    WritableMap writableMap = Arguments.createMap();
-                    writableMap.putString("url", webView.getUrl());
-                    writableMap.putInt("height", webView.getContentHeight());
-                    sendEvent((ReactContext) webView.getContext(), "updateHeight", writableMap);
-                }
+                updateHeight(webView);
+                webView.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.i(TAG, "onPageFinished: refreshContentHeight = " + webView.getContentHeight());
+                        updateHeight(webView);
+                    }
+                }, 500);
             }
+        }
+
+        private void updateHeight(WebView webView) {
+            WritableMap writableMap = Arguments.createMap();
+            writableMap.putString("url", webView.getUrl());
+            writableMap.putInt("height", webView.getContentHeight());
+            sendEvent((ReactContext) webView.getContext(), "updateHeight", writableMap);
         }
 
         @Override
