@@ -1,5 +1,6 @@
 package com.dscj.autoheightwebview;
 
+import android.os.Build;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 
@@ -40,6 +41,7 @@ public class AutoHeightWebViewManager extends ReactWebViewManager {
         webview.setVerticalScrollBarEnabled(false);
         webview.setHorizontalScrollBarEnabled(false);
         webview.addJavascriptInterface(new JavascriptBridge(webview), "AutoHeightWebView");
+        webview.getSettings().setJavaScriptEnabled(true);
 
         webview.setWebChromeClient(new WebChromeClient() {
             @Override
